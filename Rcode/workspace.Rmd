@@ -1,0 +1,93 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+```{r, warning=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(lme4)
+```
+
+Read data of different years
+```{r}
+finaldf <- read.csv("combineddf.csv")
+finaldf %>% head()
+```
+
+Print number of parcels
+```{r}
+finaldf %>% dim()
+```
+
+Check for NAs in the LIVING_AREA column.
+There are $20000$ rows with NAs, out of over $1$ million rows. 
+```{r}
+finaldf %>% dplyr::filter(is.na(LIVING_AREA)) %>% nrow()
+```
+
+We remove rows with NAs in LIVING_AREA.
+```{r}
+finaldf <- finaldf %>% dplyr::filter(!is.na(LIVING_AREA))
+```
+
+Distribution of living area grouped by land usage.
+For the "A" and "RL" categories, there are properties with living area $1$, which 
+must be systematically wrong.
+```{r}
+p <- finaldf %>% ggplot(aes(x=LIVING_AREA)) + geom_histogram() +
+  facet_wrap(vars(LU), scales="free")
+p
+```
+Find extremes of living areas.
+Even filtering out parcels with positive living area,
+there are still parcels with living area $1$.
+```{r}
+finaldf %>% dplyr::filter(LIVING_AREA > 0) %>%
+  group_by(LU) %>% 
+  summarize(maxval = max(LIVING_AREA), minval = min(LIVING_AREA))
+```
+
+Focus on individual land use codes.
+For code R4, by filtering out living area more than $1$, we have living areas
+of one order of magnitude.
+```{r}
+finaldf %>% 
+  dplyr::filter(LIVING_AREA > 1) %>%
+  dplyr::filter(LU == "R4") %>% arrange(LIVING_AREA)
+```
+
+Check if filtering living area works for other land use codes.
+There are "A" codes that have the wrong entries for living are, such as 
+PID 1101661000, but the total value has been consistently updated (from 2015 through 2018),
+and the total value hsa been increasing. 
+```{r}
+finaldf %>% 
+  dplyr::filter(LIVING_AREA > 1) %>% 
+  arrange(LIVING_AREA)
+```
+
+
+Filter out parcels with less than $300$ square feet living area.
+For all the residential codes, $300$ square feet is a reasonable amount of living space.
+We do this to remove parcels that have unreliable records of living area.
+This retains most of the parcels (1302048 out of 1371391).
+```{r}
+threshold <- 300
+finaldf <- finaldf %>% dplyr::filter(LIVING_AREA > threshold) 
+
+finaldf %>% nrow()
+```
+
+Distribution of living area.
+Discard the RL (residential lot) category.
+As we move from CD -> R1 -> R2 -> R3 -> R4 -> A, the mass
+of the log living area variable shifts to the right, which is in agreement
+with the expectation that residential parcels for more families should have more
+living area. 
+```{r}
+p <- finaldf %>% 
+  dplyr::filter(LU != "RL") %>%
+  ggplot(aes(x=log(LIVING_AREA), color=LU)) + geom_density(aes(fill=LU), alpha = 0.4) 
+p
+```
