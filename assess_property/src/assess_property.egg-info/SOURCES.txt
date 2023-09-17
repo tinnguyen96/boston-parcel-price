@@ -1,5 +1,7 @@
 pyproject.toml
+src/assess_property/fit_learner.py
 src/assess_property/global_variables.py
+src/assess_property/preprocess.py
 src/assess_property/read_data.py
 src/assess_property.egg-info/PKG-INFO
 src/assess_property.egg-info/SOURCES.txt
